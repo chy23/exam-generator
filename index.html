@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>108課綱 AI 智能題庫生成器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&display=swap" rel="stylesheet"/>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue-50:#eff6ff;--blue-100:#dbeafe;--blue-200:#bfdbfe;--blue-300:#93c5fd;
+  --blue-500:#3b82f6;--blue-600:#2563eb;--blue-700:#1d4ed8;
+  --indigo-500:#6366f1;--indigo-600:#4f46e5;--indigo-700:#4338ca;--indigo-800:#3730a3;
+  --emerald-100:#d1fae5;--emerald-500:#10b981;--emerald-600:#059669;--emerald-700:#047857;--emerald-800:#065f46;
+  --amber-50:#fffbeb;--amber-100:#fef3c7;--amber-600:#d97706;--amber-700:#b45309;--amber-800:#92400e;
+  --red-50:#fef2f2;--red-100:#fee2e2;--red-400:#f87171;--red-600:#dc2626;--red-700:#b91c1c;
+  --purple-100:#f3e8ff;--purple-700:#7e22ce;
+  --slate-50:#f8fafc;--slate-100:#f1f5f9;--slate-200:#e2e8f0;--slate-300:#cbd5e1;
+  --slate-400:#94a3b8;--slate-500:#64748b;--slate-600:#475569;--slate-700:#334155;--slate-800:#1e293b;--slate-900:#0f172a;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Sans TC',system-ui,sans-serif;background:linear-gradient(135deg,#eef2ff 0%,#f8fafc 40%,#ecfdf5 100%);min-height:100vh;color:var(--slate-800);background-attachment:fixed}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--slate-300);border-radius:3px}
+
+/* NAVBAR */
+.navbar{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.9);backdrop-filter:blur(20px);border-bottom:1px solid rgba(226,232,240,.8);box-shadow:0 1px 8px rgba(0,0,0,.07)}
+.navbar-inner{max-width:1440px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-logo{background:linear-gradient(135deg,var(--blue-600),var(--indigo-600));width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(79,70,229,.35)}
+.brand-logo svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.brand-text-main{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,var(--blue-700),var(--indigo-800));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.brand-text-sub{font-size:.62rem;color:var(--slate-400);margin-top:-2px}
+.badge-ai{background:linear-gradient(135deg,var(--indigo-600),var(--blue-600));color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.05em;margin-left:6px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:.85rem;font-family:inherit;transition:all .18s;outline:none;text-decoration:none}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.btn-dark{background:var(--slate-900);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.btn-dark:hover{background:var(--slate-700);transform:translateY(-1px)}
+.btn-blue{background:linear-gradient(135deg,var(--blue-600),var(--indigo-600));color:#fff;box-shadow:0 4px 14px rgba(79,70,229,.3)}
+.btn-blue:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,70,229,.4)}
+.btn-ghost{background:var(--slate-100);color:var(--slate-700)}
+.btn-ghost:hover{background:var(--slate-200)}
+.btn-sm{padding:7px 14px;font-size:.78rem}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+
+/* PAGE LAYOUT */
+.page{max-width:1440px;margin:0 auto;padding:24px;display:flex;gap:22px}
+@media(max-width:1023px){.page{flex-direction:column}}
+.sidebar{width:288px;flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+@media(max-width:1023px){.sidebar{width:100%}}
+.main-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:18px}
+
+/* CARDS */
+.card{background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.6);border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+.card-head{display:flex;align-items:center;gap:8px;padding:13px 15px;border-bottom:1px solid var(--slate-100);font-size:.82rem;font-weight:700;color:var(--slate-700)}
+.card-head svg{width:14px;height:14px;stroke:var(--blue-500);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.card-body{padding:14px;display:flex;flex-direction:column;gap:11px}
+
+/* FORM */
+.flabel{font-size:.7rem;font-weight:700;color:var(--slate-500);display:block;margin-bottom:4px;letter-spacing:.03em;text-transform:uppercase}
+.fselect,.finput{width:100%;padding:8px 11px;border:1.5px solid var(--slate-200);border-radius:8px;font-size:.83rem;font-family:inherit;background:#fff;color:var(--slate-800);outline:none;transition:border-color .15s,box-shadow .15s;cursor:pointer}
+.fselect:focus,.finput:focus{border-color:var(--blue-400);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.finput{cursor:text}
+.finput-wrap{position:relative}
+.finput-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--slate-400);padding:2px;display:flex;align-items:center}
+.finput-eye:hover{color:var(--slate-600)}
+.finput-eye svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* TOGGLE GROUP */
+.tgl-grp{display:flex;background:var(--slate-100);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+.tgl-btn{flex:1;min-width:0;padding:5px 6px;border:none;border-radius:6px;font-size:.72rem;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--slate-500);font-family:inherit;white-space:nowrap}
+.tgl-btn.on{background:#fff;color:var(--indigo-700);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+
+/* TAG GRID */
+.tag-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;max-height:250px;overflow-y:auto;padding-bottom:2px}
+.tag{display:flex;align-items:center;gap:5px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--slate-200);cursor:pointer;font-size:.7rem;font-weight:500;transition:all .12s;background:#fff;color:var(--slate-600);user-select:none;line-height:1.3}
+.tag:hover{border-color:var(--blue-300);background:var(--blue-50);color:var(--blue-700)}
+.tag.on{border-color:var(--blue-400);background:var(--blue-50);color:var(--blue-700)}
+.tag-chk{width:13px;height:13px;flex-shrink:0;border-radius:3px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800}
+.tag.on .tag-chk::after{content:'✓';color:var(--blue-600)}
+
+/* API KEY NOTICE */
+.api-notice{background:linear-gradient(135deg,var(--amber-50),#fff);border:1.5px solid var(--amber-100);border-radius:12px;padding:12px 14px;font-size:.78rem;color:var(--amber-800);line-height:1.6}
+.api-notice a{color:var(--blue-600);text-decoration:underline}
+.api-ok{background:linear-gradient(135deg,var(--emerald-100),#fff);border:1.5px solid #a7f3d0;border-radius:12px;padding:10px 14px;font-size:.78rem;color:var(--emerald-800);display:flex;align-items:center;gap:8px}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--blue-200);border-radius:18px;padding:36px 24px;text-align:center;cursor:pointer;transition:all .22s;background:rgba(239,246,255,.4);backdrop-filter:blur(8px)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue-500);background:var(--blue-50);transform:scale(1.005);box-shadow:0 0 0 4px rgba(59,130,246,.1)}
+.upload-zone.disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+.upload-icon{width:60px;height:60px;border-radius:50%;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;transition:transform .2s}
+.upload-icon svg{width:25px;height:25px;stroke:var(--blue-500);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.upload-zone:hover:not(.disabled) .upload-icon{transform:scale(1.1) translateY(-2px)}
+.upload-title{font-size:1rem;font-weight:700;color:var(--slate-800);margin-bottom:7px}
+.upload-desc{font-size:.82rem;color:var(--slate-500);line-height:1.7;max-width:360px;margin:0 auto 14px}
+.badges{display:flex;justify-content:center;flex-wrap:wrap;gap:6px}
+.badge{display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--slate-500);background:rgba(255,255,255,.75);padding:3px 10px;border-radius:20px;border:1px solid var(--slate-200)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* STATUS CARDS */
+.status-card{border-radius:18px;padding:36px 24px;text-align:center;backdrop-filter:blur(8px)}
+.analyzing-card{background:rgba(239,246,255,.6);border:1px solid var(--blue-100)}
+.success-card{background:rgba(236,253,245,.7);border:1px solid #a7f3d0}
+.error-card{background:var(--red-50);border:1px solid var(--red-100)}
+.spinner{width:48px;height:48px;border:4px solid var(--blue-100);border-top-color:var(--blue-500);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gen-steps{display:flex;flex-direction:column;gap:6px;margin-top:14px;text-align:left;max-width:280px;margin-left:auto;margin-right:auto}
+.gen-step{font-size:.78rem;color:var(--slate-500);display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;transition:all .3s}
+.gen-step.active{color:var(--blue-700);background:var(--blue-50);font-weight:600}
+.gen-step.done{color:var(--emerald-700)}
+.gen-step.done::before{content:'✓';font-weight:800;color:var(--emerald-600);width:16px;text-align:center}
+.gen-step:not(.done):not(.active)::before{content:'○';color:var(--slate-300);width:16px;text-align:center}
+.gen-step.active::before{content:'';display:inline-block;width:12px;height:12px;border:2px solid var(--blue-400);border-top-color:var(--blue-600);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.ok-icon{width:52px;height:52px;border-radius:50%;background:var(--emerald-100);display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.ok-icon svg{width:24px;height:24px;stroke:var(--emerald-600);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* PREVIEW CARD */
+.preview-card{flex:1;min-height:640px;border-radius:18px;background:rgba(255,255,255,.75);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.55);box-shadow:0 8px 32px rgba(0,0,0,.09);display:flex;flex-direction:column;overflow:hidden}
+.preview-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(241,245,249,.9);border-bottom:1px solid var(--slate-200)}
+.preview-head-title{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--slate-700);font-size:.85rem}
+.preview-head-title svg{width:14px;height:14px;stroke:var(--blue-500);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.preview-badge{font-size:.68rem;font-weight:700;background:#fff;border:1px solid var(--slate-200);padding:4px 12px;border-radius:20px;color:var(--slate-600);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.preview-body{flex:1;overflow:auto;background:#c8d0d8;background-image:radial-gradient(circle at 1px 1px,rgba(0,0,0,.1) 1px,transparent 0);background-size:18px 18px;display:flex;justify-content:center;align-items:flex-start;padding:28px 16px}
+.empty-state{display:flex;flex-direction:column;align-items:center;color:var(--slate-400);text-align:center;padding:60px 0;width:100%}
+.empty-state svg{width:48px;height:48px;stroke:currentColor;fill:none;opacity:.2;margin-bottom:12px;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* PAPER */
+.paper{background:#fff;box-shadow:0 6px 48px rgba(0,0,0,.22);font-family:'Noto Sans TC',sans-serif}
+.paper-hd{text-align:center;border-bottom:2.5px solid #1e293b;padding-bottom:14px;margin-bottom:20px}
+.paper-title{font-size:1.3rem;font-weight:900;margin-bottom:5px}
+.paper-sub{font-size:.88rem;color:var(--slate-600);margin-bottom:3px}
+.paper-info{font-size:.7rem;color:var(--slate-400);margin-bottom:8px}
+.paper-row{display:flex;justify-content:space-between;font-size:.78rem;font-weight:600;margin-top:7px}
+.q-sec{margin-bottom:24px;break-inside:avoid;page-break-inside:avoid}
+.q-sec-title{font-size:.92rem;font-weight:800;margin-bottom:10px;padding-left:10px;border-left:4px solid var(--blue-500);color:var(--slate-800)}
+.q-item{padding:8px;border-radius:8px;margin-bottom:12px;transition:background .15s;break-inside:avoid}
+.q-item:hover{background:rgba(239,246,255,.5)}
+.q-text{display:flex;gap:7px;color:var(--slate-800);margin-bottom:6px;line-height:1.65}
+.q-num{font-weight:800;flex-shrink:0;color:var(--slate-700)}
+.q-body{white-space:pre-line;flex:1}
+.q-opts{padding-left:22px;display:flex;flex-direction:column;gap:3px;color:var(--slate-700);font-size:.88em;margin-bottom:6px}
+.q-meta{display:flex;flex-wrap:wrap;gap:4px;padding-left:22px;margin-top:5px}
+.mpill{display:inline-flex;align-items:center;gap:3px;font-size:.61rem;font-weight:700;padding:2px 7px;border-radius:20px;border:1px solid}
+.mpill-bloom{background:var(--purple-100);color:var(--purple-700);border-color:#e9d5ff}
+.mpill-focus{background:var(--blue-100);color:var(--blue-700);border-color:var(--blue-200)}
+.paper-footer{text-align:center;font-size:.65rem;color:#c8d0d8;margin-top:32px;padding-top:12px;border-top:1px solid #f1f5f9}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.65);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadein .18s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.modal{background:#fff;border-radius:20px;max-width:500px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,.3);animation:slideup .22s ease}
+@keyframes slideup{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--slate-100)}
+.modal-title{font-size:.95rem;font-weight:800;display:flex;align-items:center;gap:8px;color:var(--slate-800)}
+.modal-title svg{width:18px;height:18px;stroke:var(--blue-600);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.modal-x{width:28px;height:28px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--slate-400);transition:all .15s;font-family:inherit}
+.modal-x:hover{background:var(--slate-100);color:var(--slate-700)}
+.modal-x svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.modal-body{padding:16px 20px}
+.sec-label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--slate-400);margin-bottom:10px}
+.exp-opt{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:10px;border:2px solid var(--slate-200);cursor:pointer;transition:all .15s;margin-bottom:6px}
+.exp-opt:hover{border-color:var(--blue-300);background:var(--blue-50)}
+.exp-opt.on{border-color:var(--blue-500);background:rgba(239,246,255,.6)}
+.exp-chk{width:18px;height:18px;border-radius:5px;border:2px solid var(--slate-300);flex-shrink:0;margin-top:1px;transition:all .15s;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
+.exp-opt.on .exp-chk{background:var(--blue-600);border-color:var(--blue-600);color:#fff}
+.exp-opt.on .exp-chk::after{content:'✓'}
+.exp-lbl{font-weight:700;font-size:.85rem;color:var(--slate-800)}
+.exp-desc{font-size:.73rem;color:var(--slate-500);margin-top:2px}
+.meta-tgl{display:flex;align-items:center;gap:9px;padding:10px 0;cursor:pointer;border-top:1px solid var(--slate-100);margin-top:4px}
+.meta-tgl input{width:15px;height:15px;accent-color:var(--blue-600);cursor:pointer;flex-shrink:0}
+.meta-tgl-text{font-size:.82rem;font-weight:500;color:var(--slate-700)}
+.modal-foot{display:flex;gap:9px;padding:14px 20px;border-top:1px solid var(--slate-100)}
+.modal-foot .btn{flex:1}
+.modal-foot .btn-blue{flex:2}
+.done-screen{padding:44px 20px;text-align:center}
+.done-circle{width:72px;height:72px;border-radius:50%;background:var(--emerald-100);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;animation:bounce .55s cubic-bezier(.36,.07,.19,.97)}
+@keyframes bounce{0%{transform:scale(0);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+.done-circle svg{width:32px;height:32px;stroke:var(--emerald-600);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useEffect,useCallback}=React;
+
+/* ── Constants ── */
+const GRADES=['國小一年級','國小二年級','國小三年級','國小四年級','國小五年級','國小六年級','國中一年級','國中二年級','國中三年級'];
+const STAGES=['第一學習階段 (小一~小二)','第二學習階段 (小三~小四)','第三學習階段 (小五~小六)','第四學習階段 (國一~國三)'];
+const SUBJECTS=[{id:'general',label:'通用領域'},{id:'chinese',label:'國語領域'},{id:'math',label:'數學領域'},{id:'science',label:'自然領域'}];
+const SUBJECT_LABEL={general:'通用領域',chinese:'國語領域',math:'數學領域',science:'自然領域'};
+const QTYPES={
+  general:['是非題','選擇題','問答題','簡答題','詳答題','配合題','連連看','短文閱讀測驗','長文閱讀測驗','勾選題'],
+  chinese:['國字測驗','注音填寫','改錯字','造樣造句','造句練習'],
+  math:['數學應用問題','情境式應用問題'],
+  science:['實驗操作素養題'],
+};
+const BLOOMS=['記憶 (Remembering)','理解 (Understanding)','應用 (Applying)','分析 (Analyzing)','評鑑 (Evaluating)','創造 (Creating)'];
+const PAPER_DIM={A4:{w:794,h:1123},A3:{w:1123,h:1587},B4:{w:945,h:1336},B5:{w:665,h:945}};
+const MARGIN_PAD={standard:'38px 50px',narrow:'22px 22px',wide:'38px 86px'};
+const MARGIN_LABEL={standard:'標準邊界',narrow:'窄版邊界',wide:'寬版邊界'};
+const EXPORT_OPTS=[
+  {id:'q',  label:'題目卷（無答案）',      desc:'純題目，直接發給學生作答'},
+  {id:'qa', label:'題目卷（含答案）',      desc:'附正確答案，供教師對卷'},
+  {id:'ans',label:'單純答案卷',           desc:'只有答案，配合題目卷使用'},
+  {id:'exp',label:'題目卷（含答案及解析）', desc:'完整解題思路，適合課後檢討'},
+];
+
+/* ── Gemini API ── */
+async function readFileAsBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result.split(',')[1]);
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function getFileMime(file){
+  const map={
+    'application/pdf':'application/pdf',
+    'image/jpeg':'image/jpeg','image/jpg':'image/jpeg','image/png':'image/png',
+    'image/gif':'image/gif','image/webp':'image/webp',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation':'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  };
+  return map[file.type]||'application/pdf';
+}
+
+async function callGemini(apiKey, file, settings){
+  const base64=await readFileAsBase64(file);
+  const mime=getFileMime(file);
+  const bloomText=settings.bloom==='all'?'各層次均衡分配（記憶、理解、應用、分析、評鑑、創造）':settings.bloom;
+  const qCount=Math.max(2,Math.ceil(8/Math.max(1,settings.questionTypes.length)));
+  const qList=settings.questionTypes.map(t=>`${t}（${qCount}題）`).join('、');
+
+  const prompt=`你是台灣108課綱素養導向的專業出題委員。
+
+請仔細閱讀上方提供的教材內容，完全根據教材內容出題，不得出現教材以外的知識。
+
+【出題規格】
+- 適用對象：${settings.grade}
+- 學習階段：${settings.stage}
+- 科目領域：${SUBJECT_LABEL[settings.subject]}
+- 布魯姆認知目標：${bloomText}
+- 題型與數量：${qList}
+
+【強制要求】
+1. 所有題目必須直接基於教材的實際內容、概念、例子或數據
+2. 不得自行加入教材以外的知識或例子
+3. 題目難度符合${settings.grade}的程度
+4. 選擇題必須提供(A)(B)(C)(D)四選項，錯誤選項要有說服力
+5. 每題附上完整答案與解析
+6. 題目要體現108課綱素養精神（情境化、實作導向）
+7. 配合題、連連看要提供完整的配對項目
+8. 閱讀測驗要包含完整的閱讀文章（可直接取用教材中的段落）
+
+【JSON格式回傳，不含其他文字】
+{
+  "questions": [
+    {
+      "type": "題型名稱",
+      "content": "完整題目文字（多行用\\n）",
+      "options": ["(A)選項","(B)選項","(C)選項","(D)選項"],
+      "answer": "正確答案",
+      "explanation": "詳細解析",
+      "bloom": "布魯姆層次",
+      "learningFocus": "對應108課綱學習重點"
+    }
+  ]
+}
+注意：只有選擇題的options才有4個選項，其他題型的options為null。`;
+
+  const res=await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{parts:[
+          {inline_data:{mime_type:mime,data:base64}},
+          {text:prompt}
+        ]}],
+        generationConfig:{temperature:0.75,maxOutputTokens:8192}
+      })
+    }
+  );
+
+  if(!res.ok){
+    const err=await res.json().catch(()=>({}));
+    const msg=err.error?.message||`HTTP ${res.status}`;
+    if(res.status===400)throw new Error('API 金鑰無效或格式錯誤，請確認後重試');
+    if(res.status===403)throw new Error('API 金鑰無存取權限，請確認已啟用 Gemini API');
+    if(res.status===429)throw new Error('請求次數超過限制，請稍後再試');
+    throw new Error(msg);
+  }
+
+  const data=await res.json();
+  const text=data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!text)throw new Error('AI 未回傳有效內容，請重試');
+
+  const match=text.match(/\{[\s\S]*\}/);
+  if(!match)throw new Error('AI 回傳格式異常，請重試');
+  try{return JSON.parse(match[0]);}
+  catch{throw new Error('JSON 解析失敗，請重試');}
+}
+
+/* ── ApiKeyCard ── */
+function ApiKeyCard({apiKey,setApiKey}){
+  const [show,setShow]=useState(false);
+  const [input,setInput]=useState(apiKey||'');
+  const save=()=>{
+    const k=input.trim();
+    setApiKey(k);
+    if(k)localStorage.setItem('gemini_api_key',k);
+    else localStorage.removeItem('gemini_api_key');
+  };
+  return<div className="card">
+    <div className="card-head">
+      <svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      Gemini API 金鑰
+    </div>
+    <div className="card-body">
+      {apiKey
+        ?<div className="api-ok">
+          <svg viewBox="0 0 24 24" style={{width:16,height:16,stroke:'var(--emerald-600)',fill:'none',strokeWidth:2.5,strokeLinecap:'round',strokeLinejoin:'round'}}><polyline points="20 6 9 17 4 12"/></svg>
+          <span>API 金鑰已設定，可以開始出題！</span>
+          <button className="btn btn-ghost btn-sm" style={{marginLeft:'auto',padding:'3px 10px',fontSize:'.68rem'}} onClick={()=>{setApiKey('');setInput('');localStorage.removeItem('gemini_api_key');}}>清除</button>
+        </div>
+        :<>
+          <div className="api-notice">
+            ⚠️ 需要 <strong>Google Gemini API 金鑰</strong> 才能真正分析教材並生成題目。<br/>
+            免費取得：<a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a> → 建立 API 金鑰
+          </div>
+          <div className="finput-wrap">
+            <input className="finput" type={show?'text':'password'} placeholder="貼上您的 Gemini API 金鑰..." value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&save()}/>
+            <button className="finput-eye" onClick={()=>setShow(!show)}>
+              <svg viewBox="0 0 24 24">{show?<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>:<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}</svg>
+            </button>
+          </div>
+          <button className="btn btn-blue" style={{width:'100%'}} onClick={save} disabled={!input.trim()}>
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            儲存 API 金鑰
+          </button>
+        </>
+      }
+    </div>
+  </div>;
+}
+
+/* ── SettingsSidebar ── */
+function SettingsSidebar({s,setS}){
+  const types=[...QTYPES.general,...(s.subject!=='general'?QTYPES[s.subject]||[]:[])];
+  const toggle=t=>{const c=s.questionTypes;setS({...s,questionTypes:c.includes(t)?c.filter(x=>x!==t):[...c,t]});};
+  const onSub=e=>setS({...s,subject:e.target.value,questionTypes:[]});
+  return<>
+    <div className="card">
+      <div className="card-head">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        出題設定
+      </div>
+      <div className="card-body">
+        <div><label className="flabel">適用對象</label>
+          <select className="fselect" value={s.grade} onChange={e=>setS({...s,grade:e.target.value})}>
+            {GRADES.map(g=><option key={g}>{g}</option>)}
+          </select></div>
+        <div><label className="flabel">課綱學習階段</label>
+          <select className="fselect" value={s.stage} onChange={e=>setS({...s,stage:e.target.value})}>
+            {STAGES.map(x=><option key={x}>{x}</option>)}
+          </select></div>
+        <div><label className="flabel">科目領域</label>
+          <select className="fselect" value={s.subject} onChange={onSub}>
+            {SUBJECTS.map(x=><option key={x.id} value={x.id}>{x.label}</option>)}
+          </select></div>
+        <div><label className="flabel">布魯姆認知層次</label>
+          <select className="fselect" value={s.bloom} onChange={e=>setS({...s,bloom:e.target.value})}>
+            <option value="all">不限（自動均衡分配）</option>
+            {BLOOMS.map(b=><option key={b}>{b}</option>)}
+          </select></div>
+      </div>
+    </div>
+    <div className="card">
+      <div className="card-head">
+        <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        題型選擇 <span style={{fontWeight:400,color:'var(--slate-400)',fontSize:'.65rem',marginLeft:4}}>(可複選)</span>
+      </div>
+      <div className="card-body">
+        {s.questionTypes.length===0&&<div style={{fontSize:'.72rem',color:'var(--amber-600)',background:var(--amber-50),padding:'6px 10px',borderRadius:7,border:'1px solid var(--amber-100)'}}>請至少選擇一種題型</div>}
+        <div className="tag-grid">
+          {types.map(t=><div key={t} className={`tag${s.questionTypes.includes(t)?' on':''}`} onClick={()=>toggle(t)}>
+            <div className="tag-chk"></div><span title={t}>{t}</span>
+          </div>)}
+        </div>
+      </div>
+    </div>
+  </>;
+}
+
+/* ── LayoutSidebar ── */
+function LayoutSidebar({l,setL}){
+  const TG=({opts,val,onChange})=><div className="tgl-grp">{opts.map(o=><button key={o} className={`tgl-btn${val===o?' on':''}`} onClick={()=>onChange(o)}>{o}</button>)}</div>;
+  return<div className="card">
+    <div className="card-head">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      版面配置
+    </div>
+    <div className="card-body">
+      <div><label className="flabel">方向</label><TG opts={['直向','橫向']} val={l.orientation} onChange={v=>setL({...l,orientation:v})}/></div>
+      <div><label className="flabel">尺寸</label><TG opts={['A4','A3','B4','B5']} val={l.size} onChange={v=>setL({...l,size:v})}/></div>
+      <div><label className="flabel">邊界</label>
+        <select className="fselect" value={l.margin} onChange={e=>setL({...l,margin:e.target.value})}>
+          <option value="standard">標準 (上下2.54cm 左右3.17cm)</option>
+          <option value="narrow">窄版 (上下1.27cm 左右1.27cm)</option>
+          <option value="wide">寬版 (上下2.54cm 左右5.08cm)</option>
+        </select></div>
+      <div><label className="flabel">欄位</label><TG opts={['1','2','3']} val={String(l.columns)} onChange={v=>setL({...l,columns:Number(v)})}/></div>
+      <div><label className="flabel">文字</label><TG opts={['橫書','直書']} val={l.textDir} onChange={v=>setL({...l,textDir:v})}/></div>
+    </div>
+  </div>;
+}
+
+/* ── UploadArea ── */
+function UploadArea({apiKey,settings,status,setStatus,setFileName,setQuestions,setError}){
+  const ref=useRef();
+  const [drag,setDrag]=useState(false);
+  const [step,setStep]=useState(0); // 0=reading,1=sending,2=parsing
+  const disabled=!apiKey||settings.questionTypes.length===0;
+
+  const handle=async files=>{
+    if(!files||!files[0])return;
+    const file=files[0];
+    if(file.size>18*1024*1024){setError('檔案過大（最大 18MB）。請壓縮後重試或改用圖片截圖。');return;}
+    setFileName(file.name);
+    setStatus('generating');
+    setStep(0);
+    setError('');
+    try{
+      setStep(0);await new Promise(r=>setTimeout(r,400));
+      setStep(1);
+      const result=await callGemini(apiKey,file,settings);
+      setStep(2);await new Promise(r=>setTimeout(r,300));
+      if(!result.questions||result.questions.length===0)throw new Error('AI 未生成任何題目，請確認教材內容是否可讀取');
+      setQuestions(result.questions);
+      setStatus('done');
+    }catch(e){
+      setError(e.message||'發生未知錯誤，請重試');
+      setStatus('error');
+    }
+  };
+
+  const STEPS=['讀取教材檔案...','AI 分析教材內容並出題...','整理題目格式...'];
+
+  if(status==='generating')return<div className="status-card analyzing-card">
+    <div className="spinner"></div>
+    <div style={{fontWeight:700,fontSize:'1rem',color:'var(--slate-800)',marginBottom:4}}>AI 正在根據您的教材出題</div>
+    <div style={{fontSize:'.82rem',color:'var(--slate-500)',marginBottom:10}}>這可能需要 10~30 秒，請稍候...</div>
+    <div className="gen-steps">
+      {STEPS.map((s,i)=><div key={i} className={`gen-step${i<step?' done':i===step?' active':''}`}>
+        <span>{s}</span>
+      </div>)}
+    </div>
+  </div>;
+
+  if(status==='done')return<div className="status-card success-card">
+    <div className="ok-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div style={{fontWeight:700,fontSize:'1rem',color:'var(--emerald-800)',marginBottom:4}}>題目生成完成！</div>
+    <div style={{fontSize:'.82rem',color:'var(--emerald-700)',marginBottom:12}}>已根據您上傳的教材生成題目，請在右側預覽。</div>
+    <button className="btn btn-ghost btn-sm" onClick={()=>{setStatus('idle');setQuestions([]);setFileName('');}}>重新上傳</button>
+  </div>;
+
+  return<div
+    className={`upload-zone${drag?' drag':''}${disabled?' disabled':''}`}
+    onClick={()=>!disabled&&ref.current.click()}
+    onDragOver={e=>{e.preventDefault();!disabled&&setDrag(true)}}
+    onDragLeave={()=>setDrag(false)}
+    onDrop={e=>{e.preventDefault();setDrag(false);!disabled&&handle(e.dataTransfer.files)}}
+  >
+    <input ref={ref} type="file" style={{display:'none'}} accept=".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg" onChange={e=>handle(e.target.files)}/>
+    <div className="upload-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <div className="upload-title">{drag?'放開以分析教材並出題':'點擊或拖曳教材檔案'}</div>
+    <div className="upload-desc">
+      {disabled&&!apiKey?'請先設定 Gemini API 金鑰':disabled?'請先選擇至少一種題型':'AI 將讀取您的教材，完全根據內容生成題目'}
+    </div>
+    <div className="badges">
+      {[['#ef4444','PDF'],['#2563eb','Word'],['#059669','Excel'],['#ea580c','PPT'],['#9333ea','圖片']].map(([c,l])=>(
+        <div key={l} className="badge"><div className="dot" style={{background:c}}/>{l}</div>
+      ))}
+    </div>
+    {!disabled&&<div style={{marginTop:10,fontSize:'.7rem',color:'var(--slate-400)'}}>最大支援 18MB</div>}
+  </div>;
+}
+
+/* ── ExamPreview ── */
+function ExamPreview({s,l,status,questions}){
+  if(status!=='done'||questions.length===0)return<div className="empty-state">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+    <p style={{fontWeight:600,fontSize:'.95rem'}}>請上傳教材後生成題目</p>
+    <p style={{fontSize:'.82rem',marginTop:5}}>AI 將完全根據您的教材內容出題</p>
+  </div>;
+
+  const dim=PAPER_DIM[l.size]||PAPER_DIM.A4;
+  const lsc=l.orientation==='橫向';
+  const pw=lsc?dim.h:dim.w,ph=lsc?dim.w:dim.h;
+  const paperStyle={
+    width:Math.min(pw,720)+'px',minHeight:ph+'px',
+    padding:MARGIN_PAD[l.margin]||MARGIN_PAD.standard,
+    columnCount:l.columns,columnGap:'2rem',
+    writingMode:l.textDir==='直書'?'vertical-rl':'horizontal-tb',
+  };
+  const subLabel={general:'跨領域',chinese:'國語',math:'數學',science:'自然'}[s.subject]||'';
+
+  // Group by type
+  const grouped=[];
+  const seen={};
+  questions.forEach(q=>{
+    if(!seen[q.type]){seen[q.type]=[];grouped.push({type:q.type,items:seen[q.type]});}
+    seen[q.type].push(q);
+  });
+
+  return<div className="paper" style={paperStyle}>
+    <div style={{columnSpan:'all'}} className="paper-hd">
+      <div className="paper-title">{s.grade} {subLabel} 素養導向評量卷</div>
+      <div className="paper-sub">學習階段：{s.stage}</div>
+      <div className="paper-info">認知目標：{s.bloom==='all'?'各層次均衡分配':s.bloom}</div>
+      <div className="paper-row">
+        <span>班級：_________ 座號：_____ 姓名：______________</span>
+        <span>得分：</span>
+      </div>
+    </div>
+
+    {grouped.map((sec,si)=><div key={sec.type} className="q-sec">
+      <div className="q-sec-title">{si+1}、{sec.type}</div>
+      {sec.items.map((q,qi)=><div key={qi} className="q-item">
+        <div className="q-text">
+          <span className="q-num">({qi+1})</span>
+          <span className="q-body">{q.content}</span>
+        </div>
+        {q.options&&Array.isArray(q.options)&&q.options.length>0&&(
+          <div className="q-opts">{q.options.map(o=><div key={o}>{o}</div>)}</div>
+        )}
+        <div className="q-meta">
+          <span className="mpill mpill-bloom">🧠 {q.bloom}</span>
+          <span className="mpill mpill-focus">🎯 {q.learningFocus}</span>
+        </div>
+      </div>)}
+    </div>)}
+
+    <div style={{columnSpan:'all'}} className="paper-footer">— 試卷結束 · 108課綱素養導向評量 —</div>
+  </div>;
+}
+
+/* ── ExportModal ── */
+function ExportModal({onClose}){
+  const [sel,setSel]=useState({q:true,qa:false,ans:false,exp:false});
+  const [meta,setMeta]=useState(true);
+  const [state,setState]=useState('idle');
+  const go=()=>{
+    if(!Object.values(sel).some(Boolean))return;
+    setState('loading');
+    setTimeout(()=>setState('done'),2000);
+    setTimeout(onClose,4200);
+  };
+  return<div className="overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal">
+      <div className="modal-head">
+        <div className="modal-title">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          匯出試卷（Docx）
+        </div>
+        <button className="modal-x" onClick={onClose}><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      {state==='done'?<div className="done-screen">
+        <div className="done-circle"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div style={{fontSize:'1.1rem',fontWeight:800,marginBottom:7}}>匯出成功！</div>
+        <div style={{fontSize:'.85rem',color:'var(--slate-500)'}}>Docx 檔案已產生完成</div>
+      </div>:<>
+        <div className="modal-body">
+          <div className="sec-label">選擇匯出內容</div>
+          {EXPORT_OPTS.map(o=><div key={o.id} className={`exp-opt${sel[o.id]?' on':''}`} onClick={()=>setSel({...sel,[o.id]:!sel[o.id]})}>
+            <div className="exp-chk"></div>
+            <div><div className="exp-lbl">{o.label}</div><div className="exp-desc">{o.desc}</div></div>
+          </div>)}
+          <label className="meta-tgl">
+            <input type="checkbox" checked={meta} onChange={e=>setMeta(e.target.checked)}/>
+            <span className="meta-tgl-text">附上 108 課綱學習重點及布魯姆認知能力標籤</span>
+          </label>
+        </div>
+        <div className="modal-foot">
+          <button className="btn btn-ghost" onClick={onClose} disabled={state==='loading'}>取消</button>
+          <button className="btn btn-blue" onClick={go} disabled={state==='loading'||!Object.values(sel).some(Boolean)}>
+            {state==='loading'?<span style={{display:'flex',alignItems:'center',gap:8}}><span className="spinner" style={{width:16,height:16,borderWidth:2.5,margin:0}}></span>產生中...</span>:'生成 Docx 檔案'}
+          </button>
+        </div>
+      </>}
+    </div>
+  </div>;
+}
+
+/* ── ERROR BANNER ── */
+function ErrorBanner({msg,onClose}){
+  if(!msg)return null;
+  return<div style={{background:'var(--red-50)',border:'1px solid var(--red-100)',borderRadius:12,padding:'12px 16px',display:'flex',alignItems:'flex-start',gap:10,fontSize:'.83rem',color:'var(--red-700)'}}>
+    <svg viewBox="0 0 24 24" style={{width:18,height:18,stroke:'var(--red-500)',fill:'none',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round',flexShrink:0,marginTop:1}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span style={{flex:1}}>{msg}</span>
+    <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'var(--red-400)',padding:0,lineHeight:1,fontSize:'1rem'}}>✕</button>
+  </div>;
+}
+
+/* ── APP ── */
+function App(){
+  const [apiKey,setApiKey]=useState(()=>localStorage.getItem('gemini_api_key')||'');
+  const [status,setStatus]=useState('idle'); // idle|generating|done|error
+  const [fileName,setFileName]=useState('');
+  const [questions,setQuestions]=useState([]);
+  const [errorMsg,setErrorMsg]=useState('');
+  const [showExport,setShowExport]=useState(false);
+  const [s,setS]=useState({grade:'國小四年級',stage:'第二學習階段 (小三~小四)',subject:'general',bloom:'all',questionTypes:['選擇題','問答題']});
+  const [l,setL]=useState({orientation:'直向',size:'A4',margin:'standard',columns:1,textDir:'橫書'});
+
+  return<>
+    <nav className="navbar">
+      <div className="navbar-inner">
+        <div className="brand">
+          <div className="brand-logo">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          </div>
+          <div>
+            <div className="brand-text-main">108課綱 智能題庫生成器<span className="badge-ai">AI</span></div>
+            <div className="brand-text-sub">根據您的教材內容，AI 自動出題 · Powered by Google Gemini</div>
+          </div>
+        </div>
+        {status==='done'&&questions.length>0&&<button className="btn btn-dark" onClick={()=>setShowExport(true)}>
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          匯出試卷
+        </button>}
+      </div>
+    </nav>
+
+    <div className="page">
+      <div className="sidebar">
+        <ApiKeyCard apiKey={apiKey} setApiKey={setApiKey}/>
+        <SettingsSidebar s={s} setS={setS}/>
+        <LayoutSidebar l={l} setL={setL}/>
+      </div>
+      <div className="main-col">
+        <ErrorBanner msg={errorMsg} onClose={()=>setErrorMsg('')}/>
+        <UploadArea
+          apiKey={apiKey} settings={s}
+          status={status} setStatus={setStatus}
+          setFileName={setFileName}
+          setQuestions={setQuestions}
+          setError={setErrorMsg}
+        />
+        <div className="preview-card">
+          <div className="preview-head">
+            <div className="preview-head-title">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+              試卷預覽
+              {questions.length>0&&<span style={{fontWeight:400,color:'var(--slate-400)',fontSize:'.75rem',marginLeft:4}}>· 共 {questions.length} 題</span>}
+            </div>
+            <div className="preview-badge">{l.size} · {l.orientation} · {MARGIN_LABEL[l.margin]} · {l.columns}欄 · {l.textDir}</div>
+          </div>
+          <div className="preview-body">
+            <ExamPreview s={s} l={l} status={status} questions={questions}/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {showExport&&<ExportModal onClose={()=>setShowExport(false)}/>}
+  </>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
