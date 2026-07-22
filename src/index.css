@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* Custom Utility Classes for Glassmorphism and High-end UI */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+  
+  .glass-dark {
+    @apply bg-slate-900/70 backdrop-blur-md border border-slate-700/50 shadow-xl;
+  }
+  
+  /* Paper-like styling for document preview */
+  .paper {
+    @apply bg-white shadow-md mx-auto print:shadow-none print:m-0 print:border-none;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased min-h-screen transition-colors duration-300;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
